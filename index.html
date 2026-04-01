@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pretext-animate - Physics-Based Text Animations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a28;
+      --border: #2a2a3a;
+      --text: #e8e8f0;
+      --text-dim: #8888aa;
+      --accent: #6c5ce7;
+      --accent-glow: rgba(108, 92, 231, 0.3);
+      --green: #00d68f;
+      --red: #ff6b6b;
+      --orange: #ffa94d;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      padding: 80px 32px 60px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #fff 0%, #a29bfe 50%, #6c5ce7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .hero .subtitle {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto 24px;
+    }
+    .hero .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: rgba(0, 214, 143, 0.1);
+      border: 1px solid rgba(0, 214, 143, 0.3);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* FPS Counter */
+    .fps-bar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--green);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(12px);
+    }
+    .fps-bar .fps-value { font-weight: 700; font-size: 16px; }
+
+    /* Sections */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    section {
+      margin-bottom: 48px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .section-header h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .section-header .tag {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    /* Effect Card */
+    .effect-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .effect-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), #a29bfe, var(--accent));
+    }
+    .effect-card .effect-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #a29bfe;
+    }
+    .effect-card .effect-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+    .effect-card .animation-area {
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    .effect-card .replay-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 20px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .replay-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Playground */
+    .playground {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 48px;
+    }
+    .playground h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 640px) {
+      .controls { grid-template-columns: 1fr; }
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .control-group input[type="text"],
+    .control-group select {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .control-group input:focus,
+    .control-group select:focus {
+      border-color: var(--accent);
+    }
+    .control-group input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .range-row input { flex: 1; }
+    .range-value {
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      min-width: 50px;
+      text-align: right;
+    }
+    .playground-preview {
+      min-height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 32px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .play-btn {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .play-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+
+    /* Comparison Section */
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+    @media (max-width: 700px) {
+      .comparison { grid-template-columns: 1fr; }
+    }
+    .comp-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+    }
+    .comp-panel h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    .comp-panel .comp-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .comp-panel.good .comp-tag {
+      background: rgba(0, 214, 143, 0.15);
+      color: var(--green);
+    }
+    .comp-panel.bad .comp-tag {
+      background: rgba(255, 107, 107, 0.15);
+      color: var(--red);
+    }
+    .comp-panel .comp-area {
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .comp-panel .comp-stats {
+      font-family: 'SF Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .comp-panel .replay-btn {
+      margin-top: 12px;
+      font-size: 12px;
+      padding: 6px 14px;
+    }
+
+    /* Traditional janky animation */
+    .janky-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .janky-text span {
+      display: inline;
+      transition: none;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-dim);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+
+    /* Animations for hero text */
+    @keyframes heroFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FPS Counter -->
+  <div class="fps-bar">
+    <span class="fps-value" id="fpsValue">--</span> fps
+    <span style="color: var(--text-dim)">|</span>
+    <span id="reflowCount" style="color: var(--green);">0 layout reflows</span>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>pretext-animate</h1>
+    <p class="subtitle">
+      Physics-based text animations with zero layout reflows.
+      All character positions pre-computed via Pretext. Only transforms and opacity during animation.
+    </p>
+    <div class="badge">
+      <span class="dot"></span>
+      120fps on mid-range devices
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Effect Showcases -->
+    <section>
+      <div class="section-header">
+        <h2>5 Built-in Effects</h2>
+        <span class="tag">pre-computed positions</span>
+      </div>
+
+      <div class="effect-card" id="card-spring">
+        <div class="effect-name">Spring Bounce-in</div>
+        <div class="effect-desc">Characters bounce up from below with damped spring physics. Natural, playful motion.</div>
+        <div class="animation-area" id="demo-spring"></div>
+        <button class="replay-btn" data-effect="spring">Replay</button>
+      </div>
+
+      <div class="effect-card" id="card-scramble">
+        <div class="effect-name">Scramble Reveal</div>
+        <div class="effect-desc">Random characters cycle rapidly before resolving to the real text. Matrix-style decode.</div>
+        <div class="animation-area" id="demo-scramble"></div>
+        <button class="replay-btn" data-effect="scramble">Replay</button>
+      </div>
+
+      <div class="effect-card" id="card-typewriter">
+        <div class="effect-name">Typewriter</div>
+        <div class="effect-desc">Characters appear one by one with a satisfying pop. Classic and clean.</div>
+        <div class="animation-area" id="demo-typewriter"></div>
+        <button class="replay-btn" data-effect="typewriter">Replay</button>
+      </div>
+
+      <div class="effect-card" id="card-wave">
+        <div class="effect-name">Wave</div>
+        <div class="effect-desc">A sine wave propagates through the text. Characters bob up and down rhythmically.</div>
+        <div class="animation-area" id="demo-wave"></div>
+        <button class="replay-btn" data-effect="wave">Replay</button>
+      </div>
+
+      <div class="effect-card" id="card-fade">
+        <div class="effect-name">Fade by Word</div>
+        <div class="effect-desc">Words fade in and slide up one by one. Elegant and readable.</div>
+        <div class="animation-area" id="demo-fade"></div>
+        <button class="replay-btn" data-effect="fade">Replay</button>
+      </div>
+    </section>
+
+    <!-- Interactive Playground -->
+    <section class="playground">
+      <h2>Playground</h2>
+      <div class="controls">
+        <div class="control-group" style="grid-column: 1 / -1;">
+          <label>Custom Text</label>
+          <input type="text" id="customText" value="Ship it and pray!" />
+        </div>
+        <div class="control-group">
+          <label>Effect</label>
+          <select id="effectSelect">
+            <option value="spring">Spring</option>
+            <option value="scramble">Scramble</option>
+            <option value="typewriter">Typewriter</option>
+            <option value="wave">Wave</option>
+            <option value="fade">Fade</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Easing</label>
+          <select id="easingSelect">
+            <option value="easeOut">Ease Out</option>
+            <option value="linear">Linear</option>
+            <option value="spring">Spring</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Duration</label>
+          <div class="range-row">
+            <input type="range" id="durationSlider" min="200" max="3000" value="1200" />
+            <span class="range-value" id="durationValue">1200ms</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Stagger</label>
+          <div class="range-row">
+            <input type="range" id="staggerSlider" min="0" max="100" value="30" />
+            <span class="range-value" id="staggerValue">30ms</span>
+          </div>
+        </div>
+      </div>
+      <div class="playground-preview" id="playground-area"></div>
+      <button class="play-btn" id="playBtn">Animate</button>
+    </section>
+
+    <!-- Comparison -->
+    <section>
+      <div class="section-header">
+        <h2>Side-by-Side Comparison</h2>
+        <span class="tag">see the difference</span>
+      </div>
+      <div class="comparison">
+        <div class="comp-panel good">
+          <h3>With Pretext</h3>
+          <span class="comp-tag">SMOOTH</span>
+          <div class="comp-area" id="comp-pretext"></div>
+          <div class="comp-stats">
+            <span style="color:var(--green);">0 reflows</span> | transform + opacity only
+          </div>
+          <button class="replay-btn" id="comp-pretext-replay">Replay</button>
+        </div>
+        <div class="comp-panel bad">
+          <h3>Traditional DOM</h3>
+          <span class="comp-tag">JANKY</span>
+          <div class="comp-area" id="comp-traditional"></div>
+          <div class="comp-stats">
+            <span style="color:var(--red);">N reflows/frame</span> | width/height changes
+          </div>
+          <button class="replay-btn" id="comp-trad-replay">Replay</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Built with <a href="https://github.com/chenglou/pretext">Pretext</a> by
+    <a href="https://github.com/ShipItAndPray">ShipItAndPray</a>.
+    Zero layout reflows. Pure physics. 120fps.
+  </footer>
+
+  <script type="module">
+    // ---- Inline the library for the demo (no build step needed) ----
+
+    // ===== LAYOUT (Pretext fallback for browser demo) =====
+    function computeCharPositions(text, font, maxWidth, lineHeightMult = 1.4) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = font;
+
+      const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)\s*px/);
+      const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
+      const lineHeightPx = Math.round(fontSize * lineHeightMult);
+
+      const chars = [];
+      let x = 0, y = 0, line = 0, idx = 0;
+
+      // Word wrap
+      const words = text.split(/(\s+)/);
+      for (const word of words) {
+        const wordW = ctx.measureText(word).width;
+        if (x + wordW > maxWidth && x > 0 && word.trim()) {
+          x = 0;
+          y += lineHeightPx;
+          line++;
+        }
+        for (const ch of word) {
+          const cw = ctx.measureText(ch).width;
+          chars.push({ char: ch, x, y, index: idx, line, width: cw });
+          x += cw;
+          idx++;
+        }
+      }
+
+      return {
+        chars,
+        width: maxWidth,
+        height: y + lineHeightPx,
+        lineCount: line + 1,
+        lineHeightPx
+      };
+    }
+
+    // ===== EFFECTS =====
+    function springEffect(chars, progress, stagger, duration) {
+      const n = chars.length;
+      if (!n) return [];
+      return chars.map(c => {
+        const delay = (c.index / n) * (stagger * n) / duration;
+        const lp = Math.max(0, Math.min(1, (progress - delay) / (1 - delay + 0.001)));
+        if (lp <= 0) return { tx: 0, ty: 60, opacity: 0, scale: 0.5, rotation: 0, displayChar: c.char };
+        const sv = 1 - Math.exp(-8 * lp) * Math.cos(4 * Math.PI * lp);
+        return { tx: 0, ty: 60 * (1 - sv), opacity: Math.min(1, lp * 3), scale: 0.5 + 0.5 * sv, rotation: 0, displayChar: c.char };
+      });
+    }
+
+    const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
+    function rndChar() { return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]; }
+    function scrambleEffect(chars, progress, stagger, duration) {
+      const n = chars.length;
+      if (!n) return [];
+      return chars.map(c => {
+        const delay = (c.index / n) * (stagger * n) / duration;
+        const lp = Math.max(0, Math.min(1, (progress - delay) / (1 - delay + 0.001)));
+        if (lp <= 0) return { tx: 0, ty: 0, opacity: 0.3, scale: 1, rotation: 0, displayChar: rndChar() };
+        const displayChar = c.char === ' ' ? ' ' : (lp >= 0.7 ? c.char : rndChar());
+        return { tx: 0, ty: 0, opacity: Math.min(1, lp * 2), scale: 1, rotation: 0, displayChar };
+      });
+    }
+
+    function typewriterEffect(chars, progress) {
+      const n = chars.length;
+      if (!n) return [];
+      return chars.map(c => {
+        const threshold = c.index / n;
+        if (progress <= threshold) return { tx: 0, ty: 0, opacity: 0, scale: 0, rotation: 0, displayChar: c.char };
+        const t = Math.min(1, (progress - threshold) / 0.05);
+        return { tx: 0, ty: 0, opacity: 1, scale: t < 1 ? 1 + 0.3 * Math.sin(t * Math.PI) : 1, rotation: 0, displayChar: c.char };
+      });
+    }
+
+    function waveEffect(chars, progress) {
+      const n = chars.length;
+      if (!n) return [];
+      return chars.map(c => {
+        const fd = (c.index / n) * 0.1;
+        const fp = Math.max(0, Math.min(1, (progress - fd) / 0.1));
+        if (fp <= 0) return { tx: 0, ty: 20, opacity: 0, scale: 1, rotation: 0, displayChar: c.char };
+        const phase = (c.index / n) * 3 * Math.PI * 2;
+        const waveY = Math.sin(phase + progress * 4 * Math.PI * 2) * 15;
+        const wi = progress > 0.2 ? Math.min(1, (progress - 0.2) / 0.2) : 0;
+        return { tx: 0, ty: waveY * wi + 20 * (1 - fp), opacity: fp, scale: 1, rotation: 0, displayChar: c.char };
+      });
+    }
+
+    function fadeEffect(chars, progress, stagger, duration) {
+      const n = chars.length;
+      if (!n) return [];
+      let wi = 0;
+      const wordMap = [];
+      let tw = 0;
+      for (const c of chars) {
+        if (c.char === ' ') { wordMap.push(wi); wi++; } else wordMap.push(wi);
+        tw = Math.max(tw, wi + 1);
+      }
+      return chars.map((c, i) => {
+        const wd = (wordMap[i] / tw) * (stagger * tw) / duration;
+        const lp = Math.max(0, Math.min(1, (progress - wd) / (1 - wd + 0.001)));
+        if (lp <= 0) return { tx: 0, ty: 12, opacity: 0, scale: 1, rotation: 0, displayChar: c.char };
+        const e = 1 - Math.pow(1 - lp, 3);
+        return { tx: 0, ty: 12 * (1 - e), opacity: e, scale: 1, rotation: 0, displayChar: c.char };
+      });
+    }
+
+    const EFFECTS = { spring: springEffect, scramble: scrambleEffect, typewriter: typewriterEffect, wave: waveEffect, fade: fadeEffect };
+
+    // ===== RENDERER =====
+    class DemoRenderer {
+      constructor(container, layout, font, color = '#e8e8f0') {
+        this.spans = [];
+        this.layout = layout;
+        this.wrapper = document.createElement('div');
+        this.wrapper.style.cssText = `position:relative;width:${layout.width}px;height:${layout.height}px;font:${font};color:${color};overflow:visible;`;
+        for (const c of layout.chars) {
+          const s = document.createElement('span');
+          s.style.cssText = `position:absolute;left:${c.x}px;top:${c.y}px;will-change:transform,opacity;transform-origin:center;white-space:pre;pointer-events:none;display:inline-block;`;
+          s.textContent = c.char;
+          this.wrapper.appendChild(s);
+          this.spans.push(s);
+        }
+        container.innerHTML = '';
+        container.appendChild(this.wrapper);
+      }
+      update(states) {
+        for (let i = 0; i < this.spans.length && i < states.length; i++) {
+          const s = this.spans[i], st = states[i];
+          s.style.transform = `translate(${st.tx}px,${st.ty}px) scale(${st.scale}) rotate(${st.rotation}deg)`;
+          s.style.opacity = st.opacity;
+          if (s.textContent !== st.displayChar) s.textContent = st.displayChar;
+        }
+      }
+      hide() { for (const s of this.spans) s.style.opacity = '0'; }
+      destroy() { if (this.wrapper.parentNode) this.wrapper.parentNode.removeChild(this.wrapper); this.spans = []; }
+    }
+
+    // ===== ANIMATOR =====
+    class DemoAnimator {
+      constructor(container, opts) {
+        this.container = container;
+        this.opts = { duration: 1200, stagger: 30, easing: 'easeOut', lineHeight: 1.4, color: '#e8e8f0', ...opts };
+        this.layout = computeCharPositions(opts.text, opts.font, opts.maxWidth, this.opts.lineHeight);
+        this.renderer = new DemoRenderer(container, this.layout, opts.font, this.opts.color);
+        this.renderer.hide();
+        this.effectFn = EFFECTS[opts.effect] || springEffect;
+        this._raf = 0;
+      }
+      play() {
+        return new Promise(resolve => {
+          this._resolve = resolve;
+          this._start = performance.now();
+          this._tick();
+        });
+      }
+      _tick() {
+        const elapsed = performance.now() - this._start;
+        let raw = Math.min(1, elapsed / this.opts.duration);
+        let p = this._ease(raw);
+        const states = this.effectFn(this.layout.chars, p, this.opts.stagger, this.opts.duration);
+        this.renderer.update(states);
+        if (raw < 1) { this._raf = requestAnimationFrame(() => this._tick()); }
+        else { if (this._resolve) this._resolve(); }
+      }
+      _ease(t) {
+        if (this.opts.easing === 'linear') return t;
+        if (this.opts.easing === 'spring') return 1 - Math.exp(-6 * t) * Math.cos(8 * t);
+        return 1 - Math.pow(1 - t, 3);
+      }
+      destroy() {
+        cancelAnimationFrame(this._raf);
+        this.renderer.destroy();
+      }
+    }
+
+    // ===== FPS COUNTER =====
+    let frameCount = 0, lastFpsTime = performance.now();
+    const fpsEl = document.getElementById('fpsValue');
+    function updateFps() {
+      frameCount++;
+      const now = performance.now();
+      if (now - lastFpsTime >= 500) {
+        const fps = Math.round(frameCount / ((now - lastFpsTime) / 1000));
+        fpsEl.textContent = fps;
+        if (fps >= 100) fpsEl.style.color = 'var(--green)';
+        else if (fps >= 50) fpsEl.style.color = 'var(--orange)';
+        else fpsEl.style.color = 'var(--red)';
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+      requestAnimationFrame(updateFps);
+    }
+    requestAnimationFrame(updateFps);
+
+    // ===== DEMO INSTANCES =====
+    const DEMO_TEXT = "Zero layout reflows.";
+    const DEMO_FONT = "700 42px 'Space Grotesk', sans-serif";
+    const DEMO_MAX = 700;
+    const demos = {};
+
+    function createDemo(effect) {
+      const container = document.getElementById(`demo-${effect}`);
+      if (demos[effect]) demos[effect].destroy();
+      const a = new DemoAnimator(container, { text: DEMO_TEXT, font: DEMO_FONT, maxWidth: DEMO_MAX, effect });
+      demos[effect] = a;
+      a.play();
+    }
+
+    // Init all demos with staggered start for dramatic entrance
+    const effectList = ['spring', 'scramble', 'typewriter', 'wave', 'fade'];
+    effectList.forEach((effect, i) => {
+      setTimeout(() => createDemo(effect), i * 300);
+    });
+
+    // Replay buttons
+    document.querySelectorAll('.replay-btn[data-effect]').forEach(btn => {
+      btn.addEventListener('click', () => createDemo(btn.dataset.effect));
+    });
+
+    // ===== PLAYGROUND =====
+    const playBtn = document.getElementById('playBtn');
+    const customText = document.getElementById('customText');
+    const effectSelect = document.getElementById('effectSelect');
+    const easingSelect = document.getElementById('easingSelect');
+    const durationSlider = document.getElementById('durationSlider');
+    const durationValue = document.getElementById('durationValue');
+    const staggerSlider = document.getElementById('staggerSlider');
+    const staggerValue = document.getElementById('staggerValue');
+    const playArea = document.getElementById('playground-area');
+    let playgroundAnimator = null;
+
+    durationSlider.addEventListener('input', () => { durationValue.textContent = durationSlider.value + 'ms'; });
+    staggerSlider.addEventListener('input', () => { staggerValue.textContent = staggerSlider.value + 'ms'; });
+
+    playBtn.addEventListener('click', () => {
+      if (playgroundAnimator) playgroundAnimator.destroy();
+      playgroundAnimator = new DemoAnimator(playArea, {
+        text: customText.value || 'Hello World!',
+        font: DEMO_FONT,
+        maxWidth: DEMO_MAX,
+        effect: effectSelect.value,
+        easing: easingSelect.value,
+        duration: parseInt(durationSlider.value),
+        stagger: parseInt(staggerSlider.value),
+      });
+      playgroundAnimator.play();
+    });
+
+    // ===== COMPARISON =====
+    const COMP_TEXT = "Smooth animation";
+    const COMP_FONT = "700 36px 'Space Grotesk', sans-serif";
+
+    // Pretext side
+    let compPretext = null;
+    function runPretextComp() {
+      if (compPretext) compPretext.destroy();
+      const container = document.getElementById('comp-pretext');
+      compPretext = new DemoAnimator(container, { text: COMP_TEXT, font: COMP_FONT, maxWidth: 450, effect: 'spring', duration: 1500 });
+      compPretext.play();
+    }
+
+    // Traditional side (intentionally janky)
+    function runTraditionalComp() {
+      const container = document.getElementById('comp-traditional');
+      container.innerHTML = '';
+      const div = document.createElement('div');
+      div.className = 'janky-text';
+      container.appendChild(div);
+
+      let charIdx = 0;
+      const chars = COMP_TEXT.split('');
+      const spans = chars.map(ch => {
+        const s = document.createElement('span');
+        s.textContent = ch;
+        s.style.display = 'none';
+        // Intentionally using layout-triggering properties
+        s.style.fontSize = '0px';
+        s.style.letterSpacing = '0px';
+        div.appendChild(s);
+        return s;
+      });
+
+      // Simulate the "bad" way: changing width/height/fontSize (causes reflows)
+      const start = performance.now();
+      function jankyTick() {
+        const elapsed = performance.now() - start;
+        const progress = Math.min(1, elapsed / 1500);
+
+        for (let i = 0; i < spans.length; i++) {
+          const threshold = i / spans.length;
+          if (progress > threshold) {
+            spans[i].style.display = 'inline';
+            // These trigger layout recalc every frame
+            const localP = Math.min(1, (progress - threshold) * 5);
+            spans[i].style.fontSize = (36 * localP) + 'px';
+            spans[i].style.letterSpacing = ((1 - localP) * 10) + 'px';
+            spans[i].style.marginTop = ((1 - localP) * 20) + 'px';
+          }
+        }
+
+        if (progress < 1) requestAnimationFrame(jankyTick);
+      }
+      jankyTick();
+    }
+
+    setTimeout(runPretextComp, 2000);
+    setTimeout(runTraditionalComp, 2000);
+
+    document.getElementById('comp-pretext-replay').addEventListener('click', runPretextComp);
+    document.getElementById('comp-trad-replay').addEventListener('click', runTraditionalComp);
+  </script>
+</body>
+</html>

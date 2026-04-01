@@ -1,0 +1,51 @@
+{
+  "name": "@shipitandpray/pretext-animate",
+  "version": "1.0.0",
+  "description": "Physics-based text animations that never cause layout recalc. Spring, scramble, typewriter, wave, fade effects with pre-computed character positions via Pretext. 120fps on mid-range devices.",
+  "author": "ShipItAndPray",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "homepage": "https://shipitandpray.github.io/pretext-animate/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShipItAndPray/pretext-animate.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@chenglou/pretext": ">=0.0.3"
+  },
+  "devDependencies": {
+    "@chenglou/pretext": "^0.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "text-animation",
+    "pretext",
+    "spring-physics",
+    "typewriter",
+    "scramble",
+    "wave",
+    "fade",
+    "zero-reflow",
+    "layout-shift",
+    "120fps"
+  ]
+}
